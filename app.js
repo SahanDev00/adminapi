@@ -1,4 +1,4 @@
-const API='https://YOUR-BACKEND.up.railway.app';
+const API='https://syntaip-production.up.railway.app';
 const $=id=>document.getElementById(id);let auth=localStorage.getItem('tracepoint_admin_token')||'';
 function headers(json=true){const h={};if(json)h['Content-Type']='application/json';if(auth)h.Authorization=`Bearer ${auth}`;return h;}
 function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
