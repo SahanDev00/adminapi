@@ -1,4 +1,4 @@
-const API='https://syntaip-production.up.railway.app';
+const API='https://YOUR-BACKEND.up.railway.app';
 const $=id=>document.getElementById(id);let auth=localStorage.getItem('tracepoint_admin_token')||'';
 function headers(json=true){const h={};if(json)h['Content-Type']='application/json';if(auth)h.Authorization=`Bearer ${auth}`;return h;}
 function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
@@ -10,7 +10,16 @@ $('refresh').addEventListener('click',load);
 $('createForm').addEventListener('submit',async e=>{e.preventDefault();$('createError').textContent='';try{await api('/api/admin/links',{method:'POST',body:JSON.stringify({label:$('label').value})});$('label').value='';toast('Link generated.');await load();}catch(err){$('createError').textContent=err.message;}});
 async function load(){try{const d=await api('/api/admin/overview');$('totalVisits').textContent=d.stats.total;$('totalCountries').textContent=d.stats.countries;$('totalLinks').textContent=d.links.length;
 $('linksBody').innerHTML=d.links.length?d.links.map(l=>`<tr><td><span class="link-label">${esc(l.label)}</span><span class="sub">${esc(l.url)}</span></td><td>${fmt(l.created)}</td><td>${l.visits}</td><td><button class="action" data-copy="${esc(l.url)}">Copy link</button><button class="action danger" data-delete="${l.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No links yet. Create your first test link above.</td></tr>';
-$('visitsBody').innerHTML=d.visits.length?d.visits.map(v=>{const loc=[v.city,v.region,v.country].filter(Boolean).join(', ')||'Location unavailable';const map=v.latitude!=null&&v.longitude!=null?`<a class="map" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${v.latitude}&mlon=${v.longitude}#map=11/${v.latitude}/${v.longitude}">Open map ↗</a>`:'—';return `<tr><td>${esc(v.label)}</td><td>${fmt(v.visited)}</td><td>${esc(loc)}</td><td>${esc(v.network||'Unknown')}</td><td>${map}</td></tr>`}).join(''):'<tr><td colspan="5" class="empty">No visits recorded yet.</td></tr>';
+$('visitsBody').innerHTML=d.visits.length?d.visits.map(v=>{
+const ipLoc=[v.city,v.region,v.country].filter(Boolean).join(', ')||'Unavailable';
+const precise=v.browser_latitude!=null&&v.browser_longitude!=null;
+const preciseLoc=precise?`${Number(v.browser_latitude).toFixed(5)}, ${Number(v.browser_longitude).toFixed(5)}`:
+  (v.browser_location_status==='denied'?'Permission denied':v.browser_location_status==='timeout'?'Timed out':v.browser_location_status==='unsupported'?'Not supported':'Not shared');
+const accuracy=precise?`${Math.round(v.browser_accuracy)} m accuracy`:'—';
+const ipMap=v.latitude!=null&&v.longitude!=null?`<a class="map" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${v.latitude}&mlon=${v.longitude}#map=10/${v.latitude}/${v.longitude}">IP map ↗</a>`:'—';
+const preciseMap=precise?`<a class="map precise-map" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${v.browser_latitude}&mlon=${v.browser_longitude}#map=17/${v.browser_latitude}/${v.browser_longitude}">Device map ↗</a>`:'';
+return `<tr><td>${esc(v.label)}</td><td>${fmt(v.visited)}</td><td>${esc(ipLoc)}<span class="sub">IP estimate</span></td><td>${esc(preciseLoc)}<span class="sub">${precise?'Browser location':'Browser location: '+esc(v.browser_location_status||'not shared')}</span></td><td>${accuracy}</td><td>${ipMap}<br>${preciseMap}</td><td>${esc(v.network||'Unknown')}</td></tr>`
+}).join(''):'<tr><td colspan="7" class="empty">No visits recorded yet.</td></tr>';
 }catch(err){toast(err.message);}}
 $('linksBody').addEventListener('click',async e=>{const copy=e.target.closest('[data-copy]');const del=e.target.closest('[data-delete]');if(copy){try{await navigator.clipboard.writeText(copy.dataset.copy);toast('Link copied to clipboard.');}catch{toast('Clipboard access unavailable.');}}if(del){if(!confirm('Delete this link and all its visit history?'))return;try{await api('/api/admin/links/'+del.dataset.delete,{method:'DELETE'});toast('Link deleted.');load();}catch(err){toast(err.message);}}});
 function fmt(s){return new Date(s).toLocaleString();}function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
